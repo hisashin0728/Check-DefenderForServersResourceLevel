@@ -1,0 +1,2 @@
+# Check-DefenderForServersResourceLevel
+Defender for Servers がリソースレベルで有効化されているかどうかを判定するための Azure Policy を公開しています
