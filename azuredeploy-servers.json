@@ -1,0 +1,157 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Defender for Servers のリソース単位 P1/P2 有効化を監査する Azure Policy をデプロイします。"
+  },
+  "parameters": {
+    "policyEffect": {
+      "type": "string",
+      "defaultValue": "AuditIfNotExists",
+      "allowedValues": [
+        "AuditIfNotExists",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "ポリシーの Effect。AuditIfNotExists（監査）または Disabled（無効）。"
+      }
+    },
+    "requiredSubPlan": {
+      "type": "string",
+      "defaultValue": "P2",
+      "allowedValues": [
+        "P1",
+        "P2"
+      ],
+      "metadata": {
+        "description": "必要な Defender for Servers のサブプラン。P1 または P2。"
+      }
+    },
+    "assignPolicy": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "true にすると、ポリシー定義の作成と同時に管理グループへの割り当ても行います。"
+      }
+    }
+  },
+  "variables": {
+    "policyDefinitionName": "custom-defender-for-servers-resource-audit",
+    "policyAssignmentName": "dfs-servers-resource-audit"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/policyDefinitions",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('policyDefinitionName')]",
+      "properties": {
+        "displayName": "[Custom] Defender for Servers - Resource Level P1/P2 Audit",
+        "policyType": "Custom",
+        "mode": "All",
+        "description": "各 Virtual Machine に対して、Defender for Servers がリソース単位で有効化（Standard tier）かつ指定された subPlan（P1/P2）であることを監査します。",
+        "metadata": {
+          "version": "1.0.0",
+          "category": "Security Center"
+        },
+        "parameters": {
+          "effect": {
+            "type": "String",
+            "metadata": {
+              "displayName": "Effect",
+              "description": "AuditIfNotExists または Disabled"
+            },
+            "allowedValues": [
+              "AuditIfNotExists",
+              "Disabled"
+            ],
+            "defaultValue": "AuditIfNotExists"
+          },
+          "requiredSubPlan": {
+            "type": "String",
+            "metadata": {
+              "displayName": "Required Sub Plan",
+              "description": "必要な Defender for Servers のサブプラン。P1 または P2 を指定します。"
+            },
+            "allowedValues": [
+              "P1",
+              "P2"
+            ],
+            "defaultValue": "P2"
+          }
+        },
+        "policyRule": {
+          "if": {
+            "anyOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Compute/virtualMachines"
+              },
+              {
+                "field": "type",
+                "equals": "Microsoft.Compute/virtualMachineScaleSets"
+              },
+              {
+                "field": "type",
+                "equals": "Microsoft.HybridCompute/machines"
+              }
+            ]
+          },
+          "then": {
+            "effect": "[[parameters('effect')]",
+            "details": {
+              "type": "Microsoft.Security/pricings",
+              "name": "VirtualMachines",
+              "evaluationDelay": "AfterProvisioning",
+              "existenceCondition": {
+                "allOf": [
+                  {
+                    "field": "Microsoft.Security/pricings/pricingTier",
+                    "equals": "Standard"
+                  },
+                  {
+                    "field": "Microsoft.Security/pricings/subPlan",
+                    "equals": "[[parameters('requiredSubPlan')]"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[parameters('assignPolicy')]",
+      "type": "Microsoft.Authorization/policyAssignments",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('policyAssignmentName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Authorization/policyDefinitions', variables('policyDefinitionName'))]"
+      ],
+      "properties": {
+        "displayName": "[Custom] Defender for Servers - Resource Level P1/P2 Audit",
+        "description": "各 Virtual Machine に対して、Defender for Servers がリソース単位で有効化（Standard tier）かつ指定された subPlan（P1/P2）であることを監査します。",
+        "policyDefinitionId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', variables('policyDefinitionName'))]",
+        "enforcementMode": "Default",
+        "parameters": {
+          "effect": {
+            "value": "[parameters('policyEffect')]"
+          },
+          "requiredSubPlan": {
+            "value": "[parameters('requiredSubPlan')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "policyDefinitionId": {
+      "type": "string",
+      "value": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', variables('policyDefinitionName'))]"
+    },
+    "policyAssignmentId": {
+      "condition": "[parameters('assignPolicy')]",
+      "type": "string",
+      "value": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', variables('policyAssignmentName'))]"
+    }
+  }
+}

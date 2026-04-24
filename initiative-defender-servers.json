@@ -1,0 +1,72 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-09-01/policySetDefinition.json#",
+  "name": "custom-defender-for-servers-initiative",
+  "properties": {
+    "displayName": "[Custom] Defender for Servers - P1/P2 Coverage Initiative",
+    "policyType": "Custom",
+    "description": "Defender for Servers の P1 および P2 の有効化状態をリソース単位で監査するイニシアティブです。各 VM / VMSS / Arc Machine に対して P1・P2 それぞれの Compliant/NonCompliant を個別に確認できます。",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Security Center"
+    },
+    "parameters": {
+      "effectP1": {
+        "type": "String",
+        "metadata": {
+          "displayName": "Effect - P1 Check",
+          "description": "P1 チェックポリシーの Effect"
+        },
+        "allowedValues": [
+          "AuditIfNotExists",
+          "Disabled"
+        ],
+        "defaultValue": "AuditIfNotExists"
+      },
+      "effectP2": {
+        "type": "String",
+        "metadata": {
+          "displayName": "Effect - P2 Check",
+          "description": "P2 チェックポリシーの Effect"
+        },
+        "allowedValues": [
+          "AuditIfNotExists",
+          "Disabled"
+        ],
+        "defaultValue": "AuditIfNotExists"
+      }
+    },
+    "policyDefinitions": [
+      {
+        "policyDefinitionReferenceId": "defenderServersP1Check",
+        "policyDefinitionId": "/providers/Microsoft.Management/managementGroups/{managementGroupId}/providers/Microsoft.Authorization/policyDefinitions/custom-defender-for-servers-p1-audit",
+        "parameters": {
+          "effect": {
+            "value": "[parameters('effectP1')]"
+          }
+        },
+        "groupNames": [
+          "DefenderForServers"
+        ]
+      },
+      {
+        "policyDefinitionReferenceId": "defenderServersP2Check",
+        "policyDefinitionId": "/providers/Microsoft.Management/managementGroups/{managementGroupId}/providers/Microsoft.Authorization/policyDefinitions/custom-defender-for-servers-p2-audit",
+        "parameters": {
+          "effect": {
+            "value": "[parameters('effectP2')]"
+          }
+        },
+        "groupNames": [
+          "DefenderForServers"
+        ]
+      }
+    ],
+    "policyDefinitionGroups": [
+      {
+        "name": "DefenderForServers",
+        "displayName": "Defender for Servers Coverage",
+        "description": "Defender for Servers の P1/P2 カバレッジ状態"
+      }
+    ]
+  }
+}

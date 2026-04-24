@@ -1,0 +1,78 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-09-01/policyDefinition.json#",
+  "name": "custom-defender-for-servers-resource-audit",
+  "properties": {
+    "displayName": "[Custom] Defender for Servers - Resource Level P1/P2 Audit",
+    "policyType": "Custom",
+    "mode": "All",
+    "description": "各 Virtual Machine に対して、Defender for Servers がリソース単位で有効化（Standard tier）かつ指定された subPlan（P1/P2）であることを監査します。",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Security Center"
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "metadata": {
+          "displayName": "Effect",
+          "description": "AuditIfNotExists または Disabled"
+        },
+        "allowedValues": [
+          "AuditIfNotExists",
+          "Disabled"
+        ],
+        "defaultValue": "AuditIfNotExists"
+      },
+      "requiredSubPlan": {
+        "type": "String",
+        "metadata": {
+          "displayName": "Required Sub Plan",
+          "description": "必要な Defender for Servers のサブプラン。P1 または P2 を指定します。"
+        },
+        "allowedValues": [
+          "P1",
+          "P2"
+        ],
+        "defaultValue": "P2"
+      }
+    },
+    "policyRule": {
+      "if": {
+        "anyOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Compute/virtualMachines"
+          },
+          {
+            "field": "type",
+            "equals": "Microsoft.Compute/virtualMachineScaleSets"
+          },
+          {
+            "field": "type",
+            "equals": "Microsoft.HybridCompute/machines"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]",
+        "details": {
+          "type": "Microsoft.Security/pricings",
+          "name": "VirtualMachines",
+          "evaluationDelay": "AfterProvisioning",
+          "existenceCondition": {
+            "allOf": [
+              {
+                "field": "Microsoft.Security/pricings/pricingTier",
+                "equals": "Standard"
+              },
+              {
+                "field": "Microsoft.Security/pricings/subPlan",
+                "equals": "[parameters('requiredSubPlan')]"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

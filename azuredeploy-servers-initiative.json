@@ -1,0 +1,299 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Defender for Servers の P1/P2 リソース単位監査ポリシー（2つ）とイニシアティブをデプロイします。"
+  },
+  "parameters": {
+    "effectP1": {
+      "type": "string",
+      "defaultValue": "AuditIfNotExists",
+      "allowedValues": [
+        "AuditIfNotExists",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "P1 チェックポリシーの Effect"
+      }
+    },
+    "effectP2": {
+      "type": "string",
+      "defaultValue": "AuditIfNotExists",
+      "allowedValues": [
+        "AuditIfNotExists",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "P2 チェックポリシーの Effect"
+      }
+    },
+    "assignInitiative": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "true にすると、イニシアティブの割り当ても同時に行います。"
+      }
+    }
+  },
+  "variables": {
+    "policyP1Name": "custom-defender-for-servers-p1-audit",
+    "policyP2Name": "custom-defender-for-servers-p2-audit",
+    "initiativeName": "custom-defender-for-servers-initiative",
+    "assignmentName": "dfs-servers-p1p2-audit"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/policyDefinitions",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('policyP1Name')]",
+      "properties": {
+        "displayName": "[Custom] Defender for Servers - P1 Enabled Audit",
+        "policyType": "Custom",
+        "mode": "All",
+        "description": "各 VM / VMSS / Arc Machine に対して、Defender for Servers が Standard tier かつ subPlan が P1 であることを監査します。",
+        "metadata": {
+          "version": "1.0.0",
+          "category": "Security Center"
+        },
+        "parameters": {
+          "effect": {
+            "type": "String",
+            "metadata": {
+              "displayName": "Effect",
+              "description": "AuditIfNotExists または Disabled"
+            },
+            "allowedValues": [
+              "AuditIfNotExists",
+              "Disabled"
+            ],
+            "defaultValue": "AuditIfNotExists"
+          }
+        },
+        "policyRule": {
+          "if": {
+            "anyOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Compute/virtualMachines"
+              },
+              {
+                "field": "type",
+                "equals": "Microsoft.Compute/virtualMachineScaleSets"
+              },
+              {
+                "field": "type",
+                "equals": "Microsoft.HybridCompute/machines"
+              }
+            ]
+          },
+          "then": {
+            "effect": "[[parameters('effect')]",
+            "details": {
+              "type": "Microsoft.Security/pricings",
+              "name": "VirtualMachines",
+              "evaluationDelay": "AfterProvisioning",
+              "existenceCondition": {
+                "allOf": [
+                  {
+                    "field": "Microsoft.Security/pricings/pricingTier",
+                    "equals": "Standard"
+                  },
+                  {
+                    "field": "Microsoft.Security/pricings/subPlan",
+                    "equals": "P1"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/policyDefinitions",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('policyP2Name')]",
+      "properties": {
+        "displayName": "[Custom] Defender for Servers - P2 Enabled Audit",
+        "policyType": "Custom",
+        "mode": "All",
+        "description": "各 VM / VMSS / Arc Machine に対して、Defender for Servers が Standard tier かつ subPlan が P2 であることを監査します。",
+        "metadata": {
+          "version": "1.0.0",
+          "category": "Security Center"
+        },
+        "parameters": {
+          "effect": {
+            "type": "String",
+            "metadata": {
+              "displayName": "Effect",
+              "description": "AuditIfNotExists または Disabled"
+            },
+            "allowedValues": [
+              "AuditIfNotExists",
+              "Disabled"
+            ],
+            "defaultValue": "AuditIfNotExists"
+          }
+        },
+        "policyRule": {
+          "if": {
+            "anyOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Compute/virtualMachines"
+              },
+              {
+                "field": "type",
+                "equals": "Microsoft.Compute/virtualMachineScaleSets"
+              },
+              {
+                "field": "type",
+                "equals": "Microsoft.HybridCompute/machines"
+              }
+            ]
+          },
+          "then": {
+            "effect": "[[parameters('effect')]",
+            "details": {
+              "type": "Microsoft.Security/pricings",
+              "name": "VirtualMachines",
+              "evaluationDelay": "AfterProvisioning",
+              "existenceCondition": {
+                "allOf": [
+                  {
+                    "field": "Microsoft.Security/pricings/pricingTier",
+                    "equals": "Standard"
+                  },
+                  {
+                    "field": "Microsoft.Security/pricings/subPlan",
+                    "equals": "P2"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/policySetDefinitions",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('initiativeName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Authorization/policyDefinitions', variables('policyP1Name'))]",
+        "[resourceId('Microsoft.Authorization/policyDefinitions', variables('policyP2Name'))]"
+      ],
+      "properties": {
+        "displayName": "[Custom] Defender for Servers - P1/P2 Coverage Initiative",
+        "policyType": "Custom",
+        "description": "Defender for Servers の P1 および P2 の有効化状態をリソース単位で監査するイニシアティブです。",
+        "metadata": {
+          "version": "1.0.0",
+          "category": "Security Center"
+        },
+        "parameters": {
+          "effectP1": {
+            "type": "String",
+            "metadata": {
+              "displayName": "Effect - P1 Check",
+              "description": "P1 チェックポリシーの Effect"
+            },
+            "allowedValues": [
+              "AuditIfNotExists",
+              "Disabled"
+            ],
+            "defaultValue": "AuditIfNotExists"
+          },
+          "effectP2": {
+            "type": "String",
+            "metadata": {
+              "displayName": "Effect - P2 Check",
+              "description": "P2 チェックポリシーの Effect"
+            },
+            "allowedValues": [
+              "AuditIfNotExists",
+              "Disabled"
+            ],
+            "defaultValue": "AuditIfNotExists"
+          }
+        },
+        "policyDefinitions": [
+          {
+            "policyDefinitionReferenceId": "defenderServersP1Check",
+            "policyDefinitionId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', variables('policyP1Name'))]",
+            "parameters": {
+              "effect": {
+                "value": "[[parameters('effectP1')]"
+              }
+            },
+            "groupNames": [
+              "DefenderForServers"
+            ]
+          },
+          {
+            "policyDefinitionReferenceId": "defenderServersP2Check",
+            "policyDefinitionId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', variables('policyP2Name'))]",
+            "parameters": {
+              "effect": {
+                "value": "[[parameters('effectP2')]"
+              }
+            },
+            "groupNames": [
+              "DefenderForServers"
+            ]
+          }
+        ],
+        "policyDefinitionGroups": [
+          {
+            "name": "DefenderForServers",
+            "displayName": "Defender for Servers Coverage",
+            "description": "Defender for Servers の P1/P2 カバレッジ状態"
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[parameters('assignInitiative')]",
+      "type": "Microsoft.Authorization/policyAssignments",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('assignmentName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Authorization/policySetDefinitions', variables('initiativeName'))]"
+      ],
+      "properties": {
+        "displayName": "[Custom] Defender for Servers - P1/P2 Coverage Audit",
+        "description": "Defender for Servers の P1 および P2 の有効化状態をリソース単位で監査します。",
+        "policyDefinitionId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policySetDefinitions', variables('initiativeName'))]",
+        "enforcementMode": "Default",
+        "parameters": {
+          "effectP1": {
+            "value": "[parameters('effectP1')]"
+          },
+          "effectP2": {
+            "value": "[parameters('effectP2')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "policyP1DefinitionId": {
+      "type": "string",
+      "value": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', variables('policyP1Name'))]"
+    },
+    "policyP2DefinitionId": {
+      "type": "string",
+      "value": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', variables('policyP2Name'))]"
+    },
+    "initiativeDefinitionId": {
+      "type": "string",
+      "value": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policySetDefinitions', variables('initiativeName'))]"
+    },
+    "assignmentId": {
+      "condition": "[parameters('assignInitiative')]",
+      "type": "string",
+      "value": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', variables('assignmentName'))]"
+    }
+  }
+}
