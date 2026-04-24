@@ -2,6 +2,26 @@
 
 Azure Policy カスタムイニシアティブ — 各 Virtual Machine / VMSS / Arc Machine に対してリソース単位の **Defender for Servers** の **P1** および **P2** の有効化状態を個別に監査します。
 
+## Deploy to Azure
+
+### イニシアティブ（P1 + P2 一括チェック）— 推奨
+
+P1/P2 両方のポリシー定義 + イニシアティブ + 割り当てを一括デプロイします。
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fhisashin0728%2FCheck-DefenderForServersResourceLevel%2Frefs%2Fheads%2Fmain%2Fazuredeploy-servers-initiative.json)
+
+### P1 チェックポリシーのみ
+
+Defender for Servers P1 の有効化を監査するポリシーを単体でデプロイします。
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fhisashin0728%2FCheck-DefenderForServersResourceLevel%2Frefs%2Fheads%2Fmain%2Fazuredeploy-servers-p1.json)
+
+### P2 チェックポリシーのみ
+
+Defender for Servers P2 の有効化を監査するポリシーを単体でデプロイします。
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fhisashin0728%2FCheck-DefenderForServersResourceLevel%2Frefs%2Fheads%2Fmain%2Fazuredeploy-servers-p2.json)
+
 ---
 
 ## 概要
@@ -127,6 +147,8 @@ New-AzManagementGroupDeployment `
 | `initiative-defender-servers.json` | イニシアティブ定義（スタンドアロン JSON） |
 | `azuredeploy-servers-initiative.json` | ARM テンプレート（ポリシー定義 + イニシアティブ + 割り当て） |
 | `azuredeploy-servers-initiative.parameters.json` | ARM テンプレートのパラメーターファイル |
+| `azuredeploy-servers-p1.json` | ARM テンプレート（P1 ポリシー単体デプロイ） |
+| `azuredeploy-servers-p2.json` | ARM テンプレート（P2 ポリシー単体デプロイ） |
 
 ---
 
